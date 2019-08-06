@@ -9,6 +9,9 @@ from json import load
 #from multiprocessing import Process
 from OpenSSL.crypto import sign
 from os import environ
+from os import getenv
+from os.path import expanduser
+from os.path import join
 from pathlib import Path
 from re import findall
 from re import search
@@ -694,7 +697,11 @@ def node_repository(operation="get",
     if target:
         target_short_node_id="{0}_{1}".format(node_name,target[0:2])
     if not filename:
-        filename="data/{0}_node_repository.json".format(target_short_node_id)
+        if not 'QIY_CREDENTIALS' in environ:
+            filename="data/{0}_node_repository.json".format(target_short_node_id)
+        else:
+            creds_path=expanduser(getenv('QIY_CREDENTIALS'))
+            filename=join(creds_path,"{0}_node_repository.json".format(target_short_node_id))
     return repository(operation=operation,
                data=data,
                filename=filename)
