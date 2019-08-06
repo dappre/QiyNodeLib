@@ -4,7 +4,7 @@ import time
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-version="0.dev5"
+version="d7"
 with open('log.out','w') as f:
     f.write(version)
 

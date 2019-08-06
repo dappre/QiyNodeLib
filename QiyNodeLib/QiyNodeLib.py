@@ -47,7 +47,7 @@ def pretty_print(r):
     print("\n")
     print(r.text)
     print("-------------------------------------------------------------------------------------------\n")
-    
+
 def node_auth_header(data="", node_id=None, node_name=None, target=None, nonce=None):
     target_short_node_id="{0}_{1}".format(node_name,target[0:2])
     if not node_id:
@@ -58,9 +58,13 @@ def node_auth_header(data="", node_id=None, node_name=None, target=None, nonce=N
             node_id=node_details['node_id']
     if nonce is None:
         nonce=int(round(time() * 1000))
-    
+
     tosign = "{0}{1}{2}".format(node_id, nonce, data)
-    with open("data/"+target_short_node_id+".pem" , "r") as f:
+    filename="data/"+target_short_node_id+".pem"
+    if 'QIY_CREDENTIALS' in environ:
+        creds_path=expanduser(getenv('QIY_CREDENTIALS'))
+        filename=join(creds_path,target_short_node_id+".pem")
+    with open(filename, "r") as f:
         buffer = f.read()
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, buffer)
     signature = b64encode(sign(key, tosign, "sha256")).decode()
@@ -112,7 +116,7 @@ def node_connect_with_listening(connect_token=None,
                                 node_type=accepter_node_type,
                                 target=target,
                                 queue=accepter_queue)
- 
+
     # Accepter uses a connect_token from the Proposer to create a connection:
     accepter_connection_url=None
     event=""
@@ -126,7 +130,7 @@ def node_connect_with_listening(connect_token=None,
                                      accepter=accepter,
                                      accepter_node_type=accepter_node_type,
                                      target=target)
- 
+
     if r.status_code==201:
         accepter_connection_url=r.headers['Location']
         print(time())
@@ -142,8 +146,8 @@ def node_connect_with_listening(connect_token=None,
         #    "type":"CONNECTED_TO_ROUTER",
         #    "connectionUrl":"http://127.0.0.1:8087/user/connections/user/pt_usernode_dr_in_lo/c241a59a-0bb1-44ce-8c3f-eafeb4fece9f",
         #    "extraData":null,
-        #    }          
- 
+        #    }
+
         print(time())
         print("\nWaiting for {0} and {1} in event".format("PID",accepter_connection_url))
         while not ("PID" in event and accepter_connection_url in event):
@@ -163,7 +167,7 @@ def node_connect_with_listening(connect_token=None,
         print("pid: '{0}'".format(pid))
         if "new-uri" in event:
             new_uri=search('"new-uri":"([^"]+)"',event).group(1)
- 
+
         # Let the Proposer use server-sent events to detect the connection:
         webhook=node_repository(operation="get",node_name=proposer,data="webhooks_by_accepter",target=target)[accepter]
         print(time())
@@ -174,7 +178,7 @@ def node_connect_with_listening(connect_token=None,
         print("    Found event: {0}".format(event))
         connection_url=search('"connectionUrl":"([^"]+)"',event).group(1)
         print(connection_url)
-        
+
         print(time())
         print("\nWaiting for {0} and {1} in event".format("STATE_HANDLED",connection_url))
         while not ("STATE_HANDLED" in event and connection_url in event):
@@ -182,7 +186,7 @@ def node_connect_with_listening(connect_token=None,
             print("    Evaluating event: {0}".format(event))
         print("    Found event: {0}".format(event))
         proposer_connection_url=event.split('"')[11]
-            
+
     # Stop listening:
     print(time())
     proposer_listener.join(0.1)
@@ -199,7 +203,7 @@ def node_connect_with_listening(connect_token=None,
     # Update the registration:
     if not (r.status_code==201 and webhook and proposer_connection_url and proposer_connection_url):
         return r
- 
+
     # - Accepter administration
     accepter_connection_url=r.headers['Location']
     if new_uri:
@@ -217,13 +221,13 @@ def node_connect_with_listening(connect_token=None,
       }
     data={'connections':connections}
     node_repository(operation="patch",node_name=accepter,target=target,data=data)
- 
+
     # - Proposer administration
     #   - Lookup accepter using webhook:
     data="accepters_by_webhook"
     accepters_by_webhook=node_repository(operation="get",node_name=proposer,data=data,target=target)
     accepter=accepters_by_webhook[webhook]
-    
+
     print(proposer_connection_url)
     connection_urls_by_node_name={
       accepter: [proposer_connection_url],
@@ -237,9 +241,9 @@ def node_connect_with_listening(connect_token=None,
       }
     data={'connections':connections}
     node_repository(operation="patch",node_name=proposer,target=target,data=data)
- 
+
     return r
- 
+
 def node_connect_without_listening(connect_token=None,
                  proposer=None,
                  proposer_node_type="user",
@@ -250,11 +254,11 @@ def node_connect_without_listening(connect_token=None,
         connect_token=node_connect_token__create(node_name=proposer,
                                                  node_type=proposer_node_type,
                                                  target=target)
- 
+
     if not connect_token:
         print('Error: No connect_token...')
         return None
-    
+
     # Persist webhook for proposer
     webhook=connect_token['target']
     data={
@@ -266,7 +270,7 @@ def node_connect_without_listening(connect_token=None,
             }
         }
     node_repository(operation="patch",node_name=proposer,data=data,target=target)
- 
+
     r=node_request(endpoint_name="scan",
                headers={'Content-Type': 'application/json',
                         "Accept":"application/json",
@@ -279,7 +283,7 @@ def node_connect_without_listening(connect_token=None,
                target=target,
                )
     return r
- 
+
 def node_connect_token__create(actions=None,
                                expires=None,
                                messages=None,
@@ -320,29 +324,29 @@ def node_connect_token__create(actions=None,
     connect_token=None
     if r.status_code==200:
         connect_token=r.json()['json']
-        
+
     return connect_token
- 
+
 def node_convert_pk_to_pem(pk_path,pem_path):
     pk_str=pk_path.read_text()
     pk_text=sub(r'(.{64})',r'\1\n',pk_str)
     header="-----BEGIN RSA PRIVATE KEY-----"
     footer="-----END RSA PRIVATE KEY-----"
-    
+
     pem="{0}\n{1}{2}".format(header,pk_text,footer)
     pem_path.write_text(pem)
 
 def node_get_public_key(node_name,
                         target=None):
     target_short_node_id="{0}_{1}".format(node_name,target[0:2])
- 
+
     with open("data/"+target_short_node_id+".pem" , "r") as f:
         buffer = f.read()
     private_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, buffer)
     public_key=OpenSSL.crypto.dump_publickey(
             OpenSSL.crypto.FILETYPE_ASN1,
             private_key)
-    
+
     return public_key
 
 def node_create(node_id=None,node_name="default_node_name",node_type='user',target=None):
@@ -351,7 +355,7 @@ def node_create(node_id=None,node_name="default_node_name",node_type='user',targ
                                              node_type=node_type,
                                              target=target)
     public_key=node_get_public_key(node_name,target=target)
- 
+
     node_details=node_repository(operation="get",node_name=node_name,target=target)
     print(node_details)
     if 'node_id' in node_details:
@@ -359,7 +363,7 @@ def node_create(node_id=None,node_name="default_node_name",node_type='user',targ
     else:
         target_short_node_id="{0}_{1}".format(node_name,target[0:2])
         node_id="pt_usernode_{0}".format(target_short_node_id)
-    
+
     body = {
         'alias': node_id,
         'id': node_id,
@@ -372,7 +376,7 @@ def node_create(node_id=None,node_name="default_node_name",node_type='user',targ
     }
     data=dumps(body)
     headers={'Content-Type': 'application/json',"Accept":"application/json"}
-    
+
     r=node_request(endpoint_name="create",
                    data=data,
                    headers=headers,
@@ -380,7 +384,7 @@ def node_create(node_id=None,node_name="default_node_name",node_type='user',targ
                    operation="post",
                    target=target)
     return r
- 
+
 def node_credentials_create(node_name,node_id=None,node_type="user",target=None):
     target_short_node_id="{0}_{1}".format(node_name,target[0:2])
     if not node_id:
@@ -396,7 +400,7 @@ def node_credentials_create(node_name,node_id=None,node_type="user",target=None)
                     public_exponent=65537,
                     key_size=2048
                     )
-            
+
             with open(pem_filename, "wb") as f:
                 f.write(private_key.private_bytes(
                     encoding=serialization.Encoding.PEM,
@@ -405,7 +409,7 @@ def node_credentials_create(node_name,node_id=None,node_type="user",target=None)
                     )
         else:
             node_convert_pk_to_pem(pk_path,pem_path)
- 
+
     node_credentials={
             "node_id": None,
             "node_name": None,
@@ -432,9 +436,9 @@ def node_credentials_create(node_name,node_id=None,node_type="user",target=None)
         for att in atts:
             if att in node_details:
                 node_credentials[att]=node_details[att]
- 
+
     return node_credentials
- 
+
 def node_delete(node_name=None,target=None,node_type="user"):
     target_short_node_id="{0}_{1}".format(node_name,target[0:2])
     node_id="pt_usernode_{0}".format(target_short_node_id)
@@ -455,19 +459,19 @@ def node_delete(node_name=None,target=None,node_type="user"):
                    path=path,
                    target=target)
     return r
-    
+
 def node_endpoint(endpoint_name="api",
                   node_name="",
                   node_type="user", # or 'card'
                   target=None
                   ):
     url=""
-    
+
     acc_endpoints={}
     acc_endpoints['api']="https://user.dolden.net/user/api".replace("user",node_type)
     acc_endpoints['delete']="https://user.dolden.net/user/owners/id".replace("user",node_type)
     if node_type=="card":
-        acc_endpoints['delete']="https://user.dolden.net/card/cardowner".replace("user",node_type)      
+        acc_endpoints['delete']="https://user.dolden.net/card/cardowner".replace("user",node_type)
     dev2_endpoints={}
     dev2_endpoints['api']="https://dev2-user.testonly.digital-me.nl/user/api".replace("user",node_type)
     dev2_endpoints['delete']="https://dev2-user.testonly.digital-me.nl/user/owners/id".replace("user",node_type)
@@ -485,7 +489,7 @@ def node_endpoint(endpoint_name="api",
     dev1_endpoints={}
     for endpoint in dev2_endpoints:
         dev1_endpoints[endpoint]=dev2_endpoints[endpoint].replace("dev2","dev1")
-        
+
     test1_endpoints={}
     test1_endpoints['api']="https://test1-user.testonly.digital-me.nl/user/api".replace("user",node_type)
     test1_endpoints['delete']="https://test1-user.testonly.digital-me.nl/user/api".replace("user",node_type)
@@ -495,7 +499,7 @@ def node_endpoint(endpoint_name="api",
     endpoints["dev2"]=dev2_endpoints
     endpoints["local"]=local_endpoints
     endpoints["test1"]=test1_endpoints
- 
+
     if not endpoint_name in ["api","delete"]:
         headers={}
         if node_name:
@@ -505,9 +509,9 @@ def node_endpoint(endpoint_name="api",
         url=node_request(headers=headers,node_type=node_type,target=target).json()['links'][endpoint_name]
     else:
         url=endpoints[target][endpoint_name]
-    
+
     return url
- 
+
 def node_events_listener(event=None,
                          node_name=None,
                          node_type='user',
@@ -536,7 +540,7 @@ def node_events_listener(event=None,
                 queue.put(None,timeout=1)
                 print("----------- BREAK ---------------")
                 break
- 
+
 def node_events_listener__start(
                                 event=None, # Stop listening event
                                 node_name=None,
@@ -556,13 +560,13 @@ def node_events_listener__start(
                   )
     thread.start()
     return thread
- 
+
 def node_generate_data_reference(node_name=None,
                                  operation_specification=None,
                                  target=None):
     base64_encoded_data_reference=None
     data=dumps(operation_specification)
-    
+
     r=node_request(endpoint_name="refs",
                    headers={'Accept':       'application/json',
                             'Content-Type': 'application/json',},
@@ -574,8 +578,8 @@ def node_generate_data_reference(node_name=None,
     if r.status_code==200:
         base64_encoded_data_reference=r.text
     return (r,base64_encoded_data_reference)
- 
- 
+
+
 def node_receive_without_listening(sender=None,
                                    receiver=None,
                                    since=None, # default: now
@@ -647,12 +651,12 @@ def node_get_messages(connection_url=None,
             return [(r, mbox_url, messages)]
         else:
             return [(r, messages)]
- 
- 
+
+
 def node_get_reference(node_name=None,
                        b32_encoded_data_reference=None,
                        target=None):
-        
+
     r=node_request(endpoint_name="ref",
                    headers={'Content-Type': 'application/json',
                         "Accept":"application/json",
@@ -666,13 +670,13 @@ def node_get_reference(node_name=None,
     if r.status_code==200:
         data=r.text
     return (r, data)
- 
+
 def node_get_references(node_name=None,
                         since=None, # default: now
                         target=None):
     if not since:
         since=int(round(time() * 1000))
-        
+
     r=node_request(endpoint_name="refs",
                    headers={'Content-Type': 'application/json',
                         "Accept":"application/json",
@@ -685,8 +689,8 @@ def node_get_references(node_name=None,
     if r.status_code==200:
         references=r.json()
     return (r, references)
- 
- 
+
+
 def node_repository(operation="get",
                  data=None,
                  filename=None,
@@ -705,7 +709,7 @@ def node_repository(operation="get",
     return repository(operation=operation,
                data=data,
                filename=filename)
- 
+
 def node_repository_reset(node_name="", # eg. "fksU"
                           target=None):
     data=node_repository(operation="get",
@@ -717,12 +721,12 @@ def node_repository_reset(node_name="", # eg. "fksU"
                          data=data,
                          target=target)
     return data
- 
- 
+
+
 def node_request(operation="get",
                  endpoint_name="api",
                  node_name="", # eg. "fksU"
-                 node_id="", 
+                 node_id="",
                  node_type="user", # or "card"
                  path="",
                  query_parameters={},
@@ -744,19 +748,19 @@ def node_request(operation="get",
     if path:
         url="{0}/{1}".format(url,path)
         print(url)
- 
+
     if query_parameters:
         url=url+"?"
         for parameter in query_parameters:
             url="{0}{1}={2}&".format(url,parameter,query_parameters[parameter])
         url=url[0:len(url)-1]
-    
+
     if node_name:
         headers['Authorization']=node_auth_header(data=data,node_name=node_name,nonce=nonce,target=target)
 
 #    if node_id or node_name:
 #        headers['Authorization']=node_auth_header(data=data,node_id=node_id,node_name=node_name,target=target)
-        
+
     methods={
         "delete": requests.delete,
         "get": requests.get,
@@ -766,7 +770,7 @@ def node_request(operation="get",
         "put": requests.put,
         }
     return methods[operation](url,headers=headers,data=data,stream=stream)
- 
+
 def node_send_without_listening(sender=None,
                  receiver=None,
                  message=None,
@@ -779,7 +783,7 @@ def node_send_without_listening(sender=None,
     if not r.status_code==200:
         print("r.status_code not 200")
         raise Exception("r.status_code not 200")
-    
+
     mbox_url=None
     connections=r.json()['result']
     for connection in connections:
@@ -801,8 +805,8 @@ def node_send_without_listening(sender=None,
                    url=mbox_url
                )
     return r
- 
- 
+
+
 def node_transfer_with_listening(sender=None,
                                  receiver=None,
                                  message=None,
@@ -811,12 +815,12 @@ def node_transfer_with_listening(sender=None,
                                  wait=0.5
                                  ):
     protocol=message['protocol']
- 
-    
+
+
     # Prepare 'global' timeout
     stop_listening=Event()
     stop_thread=Thread(daemon=True,target=node_countdown,kwargs={"event": stop_listening, "timeout": timeout}).start()
- 
+
     # Start listening on both nodes:
     sender_queue=Queue()
     sender_listener=node_events_listener__start(event=stop_listening,
@@ -828,7 +832,7 @@ def node_transfer_with_listening(sender=None,
                                 node_name=receiver,
                                 target=target,
                                 queue=receiver_queue)
- 
+
     r=None
     data_request_message=None
     try:
@@ -838,7 +842,7 @@ def node_transfer_with_listening(sender=None,
             exception_message="Error: send failure... :-("
             print(exception_message)
             raise Exception(exception_message)
-       
+
         # Let's print some messages:
         messages=None
         received_message=None
@@ -860,18 +864,18 @@ def node_transfer_with_listening(sender=None,
                 sleep(wait)
     finally:
         pass
-    
+
     # Stop listening:
     stop_listening.set()
- 
+
     if not received_message:
         exception_message="Error: message not received by receiver."
         print(exception_message)
         raise Exception(exception_message)
- 
+
     return (r, received_message)
- 
- 
+
+
 def node_transport_password(node_name=None,target=None):
 #    target_short_node_id="{0}_{1}".format(node_name,target[0:2])
 #    node_credentials_filename="./data/"+target_short_node_id+"_credentials.json"
@@ -880,5 +884,5 @@ def node_transport_password(node_name=None,target=None):
 #        node_credentials=load(f)
 #    return node_credentials['transport_password']
     return node_repository(operation="get",node_name=node_name,target=target,data="transport_password")
- 
+
 

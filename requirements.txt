@@ -1,4 +1,4 @@
-cryptography==2.2.2
-pyOpenSSL==18.0.0
-requests==2.19.0
-pytest==3.6.1
+cryptography
+pyOpenSSL
+requests
+pytest
