@@ -14,6 +14,8 @@ This library requires:
 Clone this repository, say in your home directory.
 Start a command line interface and enter the following commands:
 
-  cd ~/QiyNodeLib
-  python3 -m pip install .
+```
+cd ~/QiyNodeLib
+python3 -m pip install .
+```
   
