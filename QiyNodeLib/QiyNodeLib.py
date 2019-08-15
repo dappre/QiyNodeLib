@@ -340,7 +340,12 @@ def node_get_public_key(node_name,
                         target=None):
     target_short_node_id="{0}_{1}".format(node_name,target[0:2])
 
-    with open("data/"+target_short_node_id+".pem" , "r") as f:
+    if not 'QIY_CREDENTIALS' in environ:
+        creds_path="data"
+    else:
+        creds_path=expanduser(getenv('QIY_CREDENTIALS'))
+    filename=join(creds_path,target_short_node_id+".pem")
+    with open(filename, "r") as f:
         buffer = f.read()
     private_key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, buffer)
     public_key=OpenSSL.crypto.dump_publickey(
