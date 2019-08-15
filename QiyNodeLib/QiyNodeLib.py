@@ -389,9 +389,15 @@ def node_credentials_create(node_name,node_id=None,node_type="user",target=None)
     target_short_node_id="{0}_{1}".format(node_name,target[0:2])
     if not node_id:
         node_id="pt_usernode_{0}".format(target_short_node_id).replace("user",node_type)
-    pk_filename="./data/"+target_short_node_id+".pk"
+
+    if not 'QIY_CREDENTIALS' in environ:
+        creds_path="data"
+    else:
+        creds_path=expanduser(getenv('QIY_CREDENTIALS'))
+    
+    pk_filename=join(creds_path,target_short_node_id+".pk")
     pk_path = Path(pk_filename)
-    pem_filename="./data/"+target_short_node_id+".pem"
+    pem_filename=join(creds_path,target_short_node_id+".pem")
     pem_path = Path(pem_filename)
     if not pem_path.exists():
         if not pk_path.exists():
