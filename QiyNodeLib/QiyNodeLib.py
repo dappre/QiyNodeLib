@@ -778,7 +778,7 @@ def node_request(auth=None,
         url=url[0:len(url)-1]
 
     if node_name:
-        headers['Authorization']=node_auth_header(data=data,node_name=node_name,nonce=nonce,target=target)
+        headers['Authorization-node-QTN']=node_auth_header(data=data,node_name=node_name,nonce=nonce,target=target)
 
 #    if node_id or node_name:
 #        headers['Authorization']=node_auth_header(data=data,node_id=node_id,node_name=node_name,target=target)
