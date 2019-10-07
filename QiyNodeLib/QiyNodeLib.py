@@ -618,7 +618,7 @@ def node_get_messages(auth=None,
         if exchanged_with:
             connection_url=node_repository(node_name=node_name,data="connections",target=target)["connection_urls_by_node_name"][exchanged_with][0]
             return node_get_messages(auth=auth,
-                                     node_name,
+                                     node_name=node_name,
                                      connection_url=connection_url,
                                      since=since,
                                      target=target,
