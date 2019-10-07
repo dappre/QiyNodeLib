@@ -75,11 +75,12 @@ def node_countdown(event=None,timeout=1):
     event.set()
 
 
-def node_connect(connect_token=None,
+def node_connect(auth=None,
+                 connect_token=None,
                  node_name=None,
                  node_type="user",
                  target=None):
-    r=node_request(endpoint_name="scan",
+    r=node_request(auth=auth,endpoint_name="scan",
                headers={'Content-Type': 'application/json',
                         "Accept":"application/json",
                         "password": node_transport_password(node_name=node_name,target=target),
@@ -284,7 +285,8 @@ def node_connect_without_listening(connect_token=None,
                )
     return r
 
-def node_connect_token__create(actions=None,
+def node_connect_token__create(auth=None,
+                               actions=None,
                                expires=None,
                                messages=None,
                                node_name=None,
@@ -302,7 +304,8 @@ def node_connect_token__create(actions=None,
     if not useBudget is None:
         body['useBudget']=useBudget
     data=dumps(body)
-    r=node_request(endpoint_name="ctCreate",
+    r=node_request(auth=auth,
+                   endpoint_name="ctCreate",
                    data=data,
                    headers={'Content-Type': 'application/json',
                             "Accept":"application/json",
@@ -314,7 +317,7 @@ def node_connect_token__create(actions=None,
     if not r.status_code==200:
         pretty_print(r)
     connect_token_url=r.headers['Location']
-    r=node_request(headers={'Content-Type': 'application/json',
+    r=node_request(auth=auth,headers={'Content-Type': 'application/json',
                             "Accept":"application/json",
                             },
                    node_name=node_name,
@@ -354,7 +357,7 @@ def node_get_public_key(node_name,
 
     return public_key
 
-def node_create(node_id=None,node_name="default_node_name",node_type='user',target=None):
+def node_create(auth=None, node_id=None,node_name="default_node_name",node_type='user',target=None):
     node_credentials=node_credentials_create(node_name,
                                              node_id=node_id,
                                              node_type=node_type,
@@ -382,7 +385,8 @@ def node_create(node_id=None,node_name="default_node_name",node_type='user',targ
     data=dumps(body)
     headers={'Content-Type': 'application/json',"Accept":"application/json"}
 
-    r=node_request(endpoint_name="create",
+    r=node_request(auth=auth,
+                   endpoint_name="create",
                    data=data,
                    headers=headers,
                    node_type=node_type,
@@ -598,7 +602,8 @@ def node_receive_without_listening(sender=None,
     return node_get_messages(receiver,sender,since=since,target=target)
 
 
-def node_get_messages(connection_url=None,
+def node_get_messages(auth=None,
+                      connection_url=None,
                       exchanged_with=None,
                       node_name=None,
                       since=0,
@@ -612,13 +617,15 @@ def node_get_messages(connection_url=None,
     if not connection_url:
         if exchanged_with:
             connection_url=node_repository(node_name=node_name,data="connections",target=target)["connection_urls_by_node_name"][exchanged_with][0]
-            return node_get_messages(node_name,
+            return node_get_messages(auth=auth,
+                                     node_name,
                                      connection_url=connection_url,
                                      since=since,
                                      target=target,
                                      version=version)
         else: # do get message for all connection urls.
-            r=node_request(endpoint_name="connections",headers={"Accept":"application/json"},node_name=node_name,operation="get",target=target)
+            r=node_request(auth=auth,
+                           endpoint_name="connections",headers={"Accept":"application/json"},node_name=node_name,operation="get",target=target)
             if not r.status_code==200:
                 exception_message="Error: retreiving connections failure."
                 print(exception_message)
@@ -628,7 +635,8 @@ def node_get_messages(connection_url=None,
             r_list=[]
             for connection in connections:
                 connection_url=connection['links']['self']
-                r=node_get_messages(connection_url=connection_url,
+                r=node_get_messages(auth=auth,
+                                    connection_url=connection_url,
                                     node_name=node_name,
                                     since=since,
                                     target=target,
@@ -636,7 +644,8 @@ def node_get_messages(connection_url=None,
                 r_list.append(r[0])
             return r_list
     else: # do get message for one connection url.
-        r=node_request(headers={"Accept":"application/json"},node_name=node_name,operation="get",target=target,url=connection_url)
+        r=node_request(auth=auth,
+                       headers={"Accept":"application/json"},node_name=node_name,operation="get",target=target,url=connection_url)
         if r.status_code==200:
             mbox_url=r.json()['links']['mbox']
         if not mbox_url:
@@ -645,7 +654,8 @@ def node_get_messages(connection_url=None,
             raise Exception(exception_message)
         print(mbox_url)
         url="{0}?since={1}".format(mbox_url,since)
-        r=node_request(headers={'Content-Type': 'application/json',
+        r=node_request(auth=auth,
+                       headers={'Content-Type': 'application/json',
                             "Accept":"application/json",
                             "password": node_transport_password(node_name=node_name,target=target),
                             },
@@ -734,7 +744,8 @@ def node_repository_reset(node_name="", # eg. "fksU"
     return data
 
 
-def node_request(operation="get",
+def node_request(auth=None,
+                 operation="get",
                  endpoint_name="api",
                  node_name="", # eg. "fksU"
                  node_id="",
@@ -780,7 +791,7 @@ def node_request(operation="get",
         "post": requests.post,
         "put": requests.put,
         }
-    return methods[operation](url,headers=headers,data=data,stream=stream)
+    return methods[operation](url,auth=auth,headers=headers,data=data,stream=stream)
 
 def node_send_without_listening(sender=None,
                  receiver=None,
