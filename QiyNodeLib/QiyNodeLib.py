@@ -479,7 +479,7 @@ def node_endpoint(endpoint_name="api",
                   node_name="",
                   node_type="user", # or 'card'
                   target=None,
-                  version="v0"
+                  version=""
                   ):
     url=""
 
