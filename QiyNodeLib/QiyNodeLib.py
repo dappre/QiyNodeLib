@@ -478,21 +478,20 @@ def node_delete(node_name=None,target=None,node_type="user"):
 def node_endpoint(endpoint_name="api",
                   node_name="",
                   node_type="user", # or 'card'
-                  target=None,
-                  version=""
+                  target=None
                   ):
     url=""
 
     prod_endpoints={}
-    prod_endpoints['api']="https://user.digital-me.nl/user/v0/api".replace("user",node_type).replace("v0",version).replace("//","")
+    prod_endpoints['api']="https://user.digital-me.nl/user/v0/api".replace("user",node_type)
     prod_endpoints['delete']="https://user.dolden.net/user/v0/owners/id".replace("user",node_type)
     acc_endpoints={}
-    acc_endpoints['api']="https://user.dolden.net/user/v0/api".replace("user",node_type).replace("v0",version).replace("//","")
+    acc_endpoints['api']="https://user.dolden.net/user/v0/api".replace("user",node_type)
     acc_endpoints['delete']="https://user.dolden.net/user/owners/id".replace("user",node_type)
     if node_type=="card":
         acc_endpoints['delete']="https://user.dolden.net/card/cardowner".replace("user",node_type)
     dev2_endpoints={}
-    dev2_endpoints['api']="https://dev2-user.testonly.digital-me.nl/user/v0/api".replace("user",node_type).replace("v0",version).replace("//","")
+    dev2_endpoints['api']="https://dev2-user.testonly.digital-me.nl/user/v0/api".replace("user",node_type)
     dev2_endpoints['delete']="https://dev2-user.testonly.digital-me.nl/user/owners/id".replace("user",node_type)
     local_endpoints={}
     if target=="local":
@@ -510,7 +509,7 @@ def node_endpoint(endpoint_name="api",
         dev1_endpoints[endpoint]=dev2_endpoints[endpoint].replace("dev2","dev1")
 
     test1_endpoints={}
-    test1_endpoints['api']="https://test1-user.testonly.digital-me.nl/user/v0/api".replace("user",node_type).replace("v0",version).replace("//","")
+    test1_endpoints['api']="https://test1-user.testonly.digital-me.nl/user/v0/api".replace("user",node_type)
     test1_endpoints['delete']="https://test1-user.testonly.digital-me.nl/user/api".replace("user",node_type)
     endpoints={}
     endpoints["prod"]=prod_endpoints
